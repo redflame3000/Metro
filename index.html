@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>上海地铁探险家配置工具</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: "Noto Sans SC", sans-serif;
+            background-color: #f9fafb;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .animate-fade-in {
+            animation: fadeIn 0.5s ease-out forwards;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useCallback } = React;
+
+        // --- 常量数据 ---
+        const PLAYERS = [
+            { id: 'zhizhi', name: '唐知知', color: 'pink' },
+            { id: 'xuanxuan', name: '唐轩轩', color: 'blue' },
+            { id: 'gungun', name: '袁滚滚', color: 'amber' },
+        ];
+
+        const METRO_LINES = [
+            { id: '1', name: '1号线', color: 'bg-[#ed1c24]' },
+            { id: '2', name: '2号线', color: 'bg-[#8ec31f]' },
+            { id: '3', name: '3号线', color: 'bg-[#fff200]' },
+            { id: '4', name: '4号线', color: 'bg-[#5B2C83]' },
+            { id: '5', name: '5号线', color: 'bg-[#823094]' },
+            { id: '6', name: '6号线', color: 'bg-[#d4006f]' },
+            { id: '7', name: '7号线', color: 'bg-[#f68b1e]' },
+            { id: '8', name: '8号线', color: 'bg-[#00a1e9]' },
+            { id: '9', name: '9号线', color: 'bg-[#91c5e4]' },
+            { id: '10', name: '10号线', color: 'bg-[#c5a9dd]' },
+            { id: '11', name: '11号线', color: 'bg-[#7e2131]' },
+            { id: '12', name: '12号线', color: 'bg-[#007c5e]' },
+            { id: '13', name: '13号线', color: 'bg-[#f4a9ce]' },
+            { id: '14', name: '14号线', color: 'bg-[#626e2a]' },
+            { id: '15', name: '15号线', color: 'bg-[#c6a27a]' },
+            { id: '16', name: '16号线', color: 'bg-[#32d2c9]' },
+            { id: '17', name: '17号线', color: 'bg-[#bc796f]' },
+            { id: '18', name: '18号线', color: 'bg-[#ce9337]' },
+            { id: 'maglev', name: '磁浮线', color: 'bg-[#0092d1]' },
+            { id: 'pujiang', name: '浦江线', color: 'bg-[#B68A2E]' },
+            { id: 'jinshan', name: '金山铁路', color: 'bg-[#000000]' },
+            { id: 'cityrail', name: '市域线', color: 'bg-[#555555]' },
+        ];
+
+        const INNER_LOOP_STATIONS = [
+            '人民广场', '南京东路', '南京西路', '陆家嘴', '静安寺', '新天地', 
+            '豫园', '陕西南路', '衡山路', '常熟路', '黄陂南路', '大世界', 
+            '曲阜路', '汉中路', '新闸路', '自然博物馆', '淮海中路', '马当路', 
+            '老西门', '天潼路', '四川北路', '国际客运中心', '一大会址·新天地',
+            '上海图书馆', '嘉善路'
+        ];
+
+        // --- 组件 ---
+        const PlayerResultCard = ({ name, lines, colorType }) => {
+            const colorMap = {
+                pink: { text: 'text-pink-600', bg: 'bg-pink-50', border: 'border-pink-100', accent: 'bg-pink-500' },
+                blue: { text: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-100', accent: 'bg-blue-500' },
+                amber: { text: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-100', accent: 'bg-amber-500' },
+            };
+
+            const style = colorMap[colorType] || colorMap.blue;
+
+            return (
+                <div className={`rounded-2xl p-5 shadow-sm border ${style.bg} ${style.border} animate-fade-in`}>
+                    <div className="flex items-center mb-4">
+                        <div className={`w-2.5 h-6 rounded-full mr-2 ${style.accent}`}></div>
+                        <h3 className={`text-xl font-extrabold ${style.text}`}>{name}</h3>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                        {lines.map((line) => (
+                            <div
+                                key={line.id}
+                                className={`px-3 py-1.5 rounded-lg text-white text-xs font-bold shadow-sm flex items-center gap-1.5 transition-transform hover:scale-105 ${line.color}`}
+                            >
+                                <div className="w-1.5 h-1.5 rounded-full bg-white opacity-50"></div>
+                                <span>{line.name}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        };
+
+        const App = () => {
+            const [pieceCount, setPieceCount] = useState(3);
+            const [activePlayerIds, setActivePlayerIds] = useState(['zhizhi', 'xuanxuan']);
+            const [gameState, setGameState] = useState({
+                results: [],
+                destination: '',
+                isGenerated: false,
+            });
+
+            const togglePlayer = (id) => {
+                setActivePlayerIds(prev => {
+                    if (prev.includes(id)) {
+                        if (prev.length === 1) return prev;
+                        return prev.filter(p => p !== id);
+                    }
+                    return [...prev, id];
+                });
+            };
+
+            const generateConfig = useCallback(() => {
+                const shuffledLines = [...METRO_LINES].sort(() => Math.random() - 0.5);
+                const selectedPlayers = PLAYERS.filter(p => activePlayerIds.includes(p.id));
+                
+                const results = [];
+                let lineIndex = 0;
+
+                selectedPlayers.forEach((player) => {
+                    const playerLines = shuffledLines.slice(lineIndex, lineIndex + pieceCount);
+                    results.push({
+                        playerName: player.name,
+                        lines: playerLines,
+                        color: player.color,
+                    });
+                    lineIndex += pieceCount;
+                });
+
+                const randomDest = INNER_LOOP_STATIONS[Math.floor(Math.random() * INNER_LOOP_STATIONS.length)];
+
+                setGameState({
+                    results,
+                    destination: randomDest,
+                    isGenerated: true,
+                });
+            }, [pieceCount, activePlayerIds]);
+
+            return (
+                <div className="min-h-screen bg-gray-50 flex flex-col pb-10">
+                    <header className="bg-blue-600 text-white p-6 shadow-lg rounded-b-3xl">
+                        <h1 className="text-2xl font-bold text-center">上海地铁探险家</h1>
+                        <p className="text-center opacity-80 text-sm mt-1">游戏配置工具</p>
+                    </header>
+
+                    <main className="flex-1 p-4 max-w-md mx-auto w-full">
+                        <section className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-6 space-y-6">
+                            <div>
+                                <label className="block text-gray-700 font-medium mb-3 text-center">选择本局玩家</label>
+                                <div className="flex justify-center gap-3">
+                                    {PLAYERS.map(player => (
+                                        <button
+                                            key={player.id}
+                                            onClick={() => togglePlayer(player.id)}
+                                            className={`flex flex-col items-center gap-2 transition-all p-2 rounded-xl ${
+                                                activePlayerIds.includes(player.id) ? 'scale-105 opacity-100' : 'opacity-40 grayscale scale-95'
+                                            }`}
+                                        >
+                                            <div className={`w-14 h-14 rounded-full flex items-center justify-center text-white text-xl font-bold shadow-md ${
+                                                player.color === 'pink' ? 'bg-pink-500' : player.color === 'blue' ? 'bg-blue-500' : 'bg-amber-500'
+                                            }`}>
+                                                {player.name[0]}
+                                            </div>
+                                            <span className="text-xs font-bold text-gray-600">{player.name}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-gray-700 font-medium mb-3 text-center">每人棋子数量 (1-5)</label>
+                                <div className="flex justify-between items-center gap-2 px-2">
+                                    {[1, 2, 3, 4, 5].map((num) => (
+                                        <button
+                                            key={num}
+                                            onClick={() => setPieceCount(num)}
+                                            className={`w-11 h-11 rounded-full flex items-center justify-center font-bold transition-all ${
+                                                pieceCount === num ? 'bg-blue-600 text-white scale-110 shadow-md ring-4 ring-blue-100' : 'bg-gray-100 text-gray-500'
+                                            }`}
+                                        >
+                                            {num}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <button
+                                onClick={generateConfig}
+                                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg active:scale-95 transition-transform"
+                            >
+                                开始生成配置
+                            </button>
+                        </section>
+
+                        {gameState.isGenerated && (
+                            <div className="space-y-6">
+                                <div className="bg-gradient-to-br from-indigo-600 via-blue-600 to-cyan-500 rounded-2xl p-6 shadow-xl text-white text-center relative overflow-hidden animate-fade-in">
+                                    <span className="text-xs uppercase tracking-widest font-bold opacity-80">本局终点站</span>
+                                    <h2 className="text-3xl font-black mt-1 tracking-tight">{gameState.destination}</h2>
+                                    <div className="mt-3 flex items-center justify-center gap-2">
+                                        <span className="h-px w-8 bg-white/30"></span>
+                                        <p className="text-[10px] uppercase font-bold text-white/70">4号线内环非环线站</p>
+                                        <span className="h-px w-8 bg-white/30"></span>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 gap-4">
+                                    {gameState.results.map((result, idx) => (
+                                        <PlayerResultCard 
+                                            key={idx}
+                                            name={result.playerName} 
+                                            lines={result.lines} 
+                                            colorType={result.color}
+                                        />
+                                    ))}
+                                </div>
+
+                                <button 
+                                    onClick={() => setGameState({ ...gameState, isGenerated: false })}
+                                    className="w-full text-gray-400 text-sm font-medium py-4 rounded-xl border-2 border-dashed border-gray-200"
+                                >
+                                    重新配置游戏
+                                </button>
+                            </div>
+                        )}
+
+                        {!gameState.isGenerated && (
+                            <div className="text-center mt-12 px-10 opacity-60">
+                                <p className="text-gray-400 text-sm leading-relaxed">选择玩家和棋子数量，<br/>为探险家们分配地铁线路。</p>
+                            </div>
+                        )}
+                    </main>
+
+                    <footer className="p-4 text-center text-gray-300 text-xs mt-auto">
+                        &copy; 2025 上海地铁探险家配置工具
+                    </footer>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
